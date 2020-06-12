@@ -21,7 +21,9 @@ namespace OrderMatcher
         private Price _marketPrice;
         private KeyValuePair<int, HashSet<OrderId>>? _firstGoodTillDate;
 
+        // Used to keep track of all active orders (buy/sell alike)
         public IEnumerable<KeyValuePair<OrderId, Order>> CurrentOrders => _currentOrders;
+
         public IEnumerable<KeyValuePair<OrderId, Iceberg>> CurrentIcebergOrders => _currentIcebergOrders;
         public IEnumerable<KeyValuePair<int, HashSet<OrderId>>> GoodTillDateOrders => _goodTillDateOrders;
         public IEnumerable<OrderId> AcceptedOrders => _acceptedOrders;
@@ -371,10 +373,14 @@ namespace OrderMatcher
                     var cost = Math.Round(maxQuantity * matchPrice, _quoteCurrencyDecimalPlaces);
                     restingOrder.Cost += cost;
                     incomingOrder.Cost += cost;
-                    var incomingFee = _feeProvider.GetFee(incomingOrder.FeeId);
-                    var restingFee = _feeProvider.GetFee(restingOrder.FeeId);
-                    restingOrder.Fee += Math.Round((cost * restingFee.MakerFee) / 100, _quoteCurrencyDecimalPlaces);
-                    incomingOrder.Fee += Math.Round((cost * incomingFee.TakerFee) / 100, _quoteCurrencyDecimalPlaces);
+                    if (_feeProvider != null)
+                    {
+                        var incomingFee = _feeProvider.GetFee(incomingOrder.FeeId);
+                        var restingFee = _feeProvider.GetFee(restingOrder.FeeId);
+                        restingOrder.Fee += Math.Round((cost * restingFee.MakerFee) / 100, _quoteCurrencyDecimalPlaces);
+                        incomingOrder.Fee += Math.Round((cost * incomingFee.TakerFee) / 100, _quoteCurrencyDecimalPlaces);
+                    }
+
                     bool orderFilled = _book.FillOrder(restingOrder, maxQuantity);
                     bool isRestingTipAdded = false;
                     if (orderFilled)
